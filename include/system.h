@@ -18,7 +18,7 @@ class System {
   int RunningProcesses();
   std::string Kernel();
   std::string OperatingSystem();
-S
+
  private:
   Processor cpu_ = {};
   std::vector<Process> processes_ = {};
