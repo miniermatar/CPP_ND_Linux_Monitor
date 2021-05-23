@@ -19,8 +19,7 @@ vector<Process>& System::Processes() {
     processes_.clear();
     vector<int> pid_ids=LinuxParser::Pids();
     for (int pid:pid_ids) {
-        Process pid_process (pid);
-        processes_.push_back(pid_process);
+        processes_.emplace_back(pid); //emplace_back(pid) automatically calls the constructor
     }
     std::sort(processes_.begin(),processes_.end());
     return processes_;

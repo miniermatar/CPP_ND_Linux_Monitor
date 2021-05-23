@@ -81,28 +81,32 @@ vector<int> LinuxParser::Pids() {
 }
 
 float LinuxParser::MemoryUtilization() {
-    float MemTotal, MemFree;
+    float MemTotal=0;
+    float MemFree=0;
     std::string value;
     value=parameter(kProcDirectory + kMeminfoFilename,"MemTotal");
     value.erase(std::remove(value.begin(), value.end(), 'k'),value.end());
     value.erase(std::remove(value.begin(), value.end(), 'B'),value.end());
-    MemTotal=stof(value);
+    if (value!="")
+      MemTotal=stof(value);
     value=parameter(kProcDirectory + kMeminfoFilename,"MemFree");
     value.erase(std::remove(value.begin(), value.end(), 'k'),value.end());
     value.erase(std::remove(value.begin(), value.end(), 'B'),value.end());
-    MemFree=stof(value);
+    if (value!="")
+      MemFree=stof(value);
     return ((MemTotal-MemFree)/(MemTotal));
 }
 
 long LinuxParser::UpTime() {
 
-    long uptime;
+    long uptime=0;
     string line, uptime_string;
     std::ifstream stream(kProcDirectory + kUptimeFilename);
     if (stream.is_open()) {
       std::getline(stream, line);
       std::istringstream linestream(line);
       linestream >> uptime_string;
+    if (uptime_string!="")
       uptime = std::stof(uptime_string);
     }
     return uptime; }
@@ -128,16 +132,15 @@ string LinuxParser::Command(int pid) {
     }
     return line;
 }
-
+// In this application, I am measuring the amount of physical memory needed for the process (VmData) instead of the virtual memory (VmSize)
 string LinuxParser::Ram(int pid) {
-    float vm;
+    float vm=0;
     std::string value;
-    value=parameter(kProcDirectory + std::to_string(pid) + kStatusFilename,"VmSize");
+    value=parameter(kProcDirectory + std::to_string(pid) + kStatusFilename,"VmData");
     value.erase(std::remove(value.begin(), value.end(), 'k'),value.end());
     value.erase(std::remove(value.begin(), value.end(), 'B'),value.end());
-    if (value=="")
-        value="0";
-    vm=stof(value)*0.001; //converting to MB
+    if (value!="")
+        vm=stof(value)*0.001; //converting to MB
     return std::to_string (static_cast<int>(vm));
 }
 
@@ -165,6 +168,7 @@ string LinuxParser::User(int pid) {
 }
 
 long LinuxParser::UpTime(int pid) {
+    float uptime_sec=0;
     string line, uptime;
     std::ifstream filestream(kProcDirectory+std::to_string(pid)+kStatFilename);
     if (filestream.is_open()) {
@@ -178,8 +182,16 @@ long LinuxParser::UpTime(int pid) {
                 break;
         }
     }
-    float uptime_sec = std::stof(uptime)/sysconf(_SC_CLK_TCK);
-    return uptime_sec;
+    if (uptime!="") {
+        std::string kernel = Kernel();
+        float version = std::stof(kernel.erase(3,kernel.length()));
+        if (version<=2.6) {
+                uptime_sec = UpTime()-std::stof(uptime)/60;
+        } else {
+                uptime_sec = UpTime()-std::stof(uptime)/sysconf(_SC_CLK_TCK);
+        }
+    }
+        return static_cast<long>(uptime_sec);
 }
 
 float LinuxParser::CpuUtilization(int pid) {
@@ -193,6 +205,8 @@ float LinuxParser::CpuUtilization(int pid) {
         while (linestream) {
             i++;
             linestream >> value;
+            if (value=="")
+                value="0";
             switch (i) {
                 case 14:
                     utime= stof(value);
